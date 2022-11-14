@@ -46,7 +46,7 @@ class QueryBuilder extends Builder
      *
      * @var null|Model
      */
-    private $model = null;
+    public $model = null;
 
     /**
      * Create a new query builder instance.
