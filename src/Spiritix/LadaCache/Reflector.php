@@ -99,17 +99,19 @@ class Reflector
      *
      * @return array
      */
-    public function getTables()
+   public function getTables()
     {
         // Get main table
-        $tables = [$this->queryBuilder->from];
+        $tables = [];
+        if (is_string($this->queryBuilder->from)) {
+            $tables[] = trim(preg_replace('#[\s]+(AS[\s]+)[\w\.]+#i', '', $this->queryBuilder->from));
+        }
 
         // Add possible join tables
         $joins = $this->queryBuilder->joins ?: [];
         foreach ($joins as $join) {
-
             if (!in_array($join->table, $tables) && is_string($join->table)) {
-                $tables[] = $join->table;
+                $tables[] = trim(preg_replace('#[\s]+(AS[\s]+)[\w\.]+#i', '', $join->table));
             }
         }
 
@@ -123,21 +125,24 @@ class Reflector
      *
      * @param QueryBuilder $queryBuilder
      */
-    private function getTablesFromWhere(QueryBuilder $queryBuilder, &$tables) {
+     private function getTablesFromWhere(QueryBuilder $queryBuilder, &$tables) {
         if (!isset($queryBuilder->wheres)) {
             return;
         }
         $wheres = $queryBuilder->wheres ?: [];
         foreach ($wheres as $where) {
             if ($where['type'] == 'Exists' || $where['type'] == 'NotExists') {
-                $tables[] = $where['query']->from;
+                $table = trim(preg_replace('#[\s]+(AS[\s]+)[\w\.]+#i', '', $where['query']->from));
+                if (!in_array($table, $tables) && is_string($table)) {
+                    $tables[] = $table;
+                }
 
                 // Add possible join tables
                 $joins = $where['query']->joins ?: [];
                 foreach ($joins as $join) {
 
                     if (!in_array($join->table, $tables) && is_string($join->table)) {
-                        $tables[] = $join->table;
+                        $tables[] = trim(preg_replace('#[\s]+(AS[\s]+)[\w\.]+#i', '', $join->table));
                     }
                 }
             }
@@ -166,13 +171,13 @@ class Reflector
 
             // If it doesn't contain the table name assume it's the "FROM" table
             if (strpos($where['column'], '.') === false) {
-                $where['column'] = implode('.', [$this->queryBuilder->from, $where['column']]);
+                $where['column'] = implode('.', [trim(preg_replace('#[\s]+(AS[\s]+)[\w\.]+#i', '', $this->queryBuilder->from)), $where['column']]);
             }
 
             list($table, $column) = $this->splitTableAndColumn($where['column']);
 
             // Make sure that the where clause applies for the primary key column
-            if ($column !== $this->queryBuilder->getPrimaryKeyName()) {
+            if ($column !== $this->queryBuilder->model->getKeyName()) {
                 continue;
             }
 
@@ -186,7 +191,8 @@ class Reflector
                 if ($where['operator'] === '=' && is_numeric($where['value'])) {
                     $rows[$table][] = $where['value'];
                 }
-            } else if ($where['type'] === 'In') {
+            }
+            else if ($where['type'] === 'In') {
                 $rows[$table] += $where['values'];
             }
         }
