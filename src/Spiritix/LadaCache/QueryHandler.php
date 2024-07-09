@@ -161,11 +161,6 @@ class QueryHandler
             $this->cache->set($key, $tags, $result);
         }
 
-        else {
-            // Cache hit, validate cache tags on key
-            $this->cache->setCacheTagsForKey($key, $tags);
-        }
-
         $this->destructCollector($reflector, $tags, $key, $action);
 
         return $result;
