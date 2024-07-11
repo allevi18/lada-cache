@@ -163,12 +163,7 @@ class QueryHandler
        else {
             // Cache hit, validate cache tags on key
             //$this->cache->setCacheTagsForKey($key, $tags);
-        }
-        \Log::info("Lada cache $action", ['key' => $key, 'tags' => $tags]);
-
-
-        
-
+        }        
         
 
         $this->destructCollector($reflector, $tags, $key, $action);
