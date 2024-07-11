@@ -18,6 +18,7 @@ use Illuminate\Database\Query\Grammars\Grammar;
 use Illuminate\Database\Query\Processors\Processor;
 use Spiritix\LadaCache\QueryHandler;
 use Spiritix\LadaCache\Reflector;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Overrides Laravel's query builder class.
@@ -102,6 +103,13 @@ class QueryBuilder extends Builder
         });
     }
 
+    protected function invalidateAfterCommit($type, $values = null)
+    {
+        DB::afterCommit(function () use ($type, $values) {
+            $this->handler->setBuilder($this)->invalidateQuery($type, $values);
+        });
+    }
+
     /**
      * Add a subselect expression to the query.
      *
@@ -129,8 +137,7 @@ class QueryBuilder extends Builder
     {
         $result = parent::insert($values);
 
-        $this->handler->setBuilder($this)
-            ->invalidateQuery(Reflector::QUERY_TYPE_INSERT, $values);
+        $this->invalidateAfterCommit(Reflector::QUERY_TYPE_INSERT, $values);
 
         return $result;
     }
@@ -146,8 +153,7 @@ class QueryBuilder extends Builder
     {
         $result = parent::insertGetId($values, $sequence);
 
-        $this->handler->setBuilder($this)
-            ->invalidateQuery(Reflector::QUERY_TYPE_INSERT, $values);
+        $this->invalidateAfterCommit(Reflector::QUERY_TYPE_INSERT, $values);
 
         return $result;
     }
@@ -162,8 +168,7 @@ class QueryBuilder extends Builder
     {
         $result = parent::update($values);
 
-        $this->handler->setBuilder($this)
-            ->invalidateQuery(Reflector::QUERY_TYPE_UPDATE, $values);
+        $this->invalidateAfterCommit(Reflector::QUERY_TYPE_UPDATE, $values);
 
         return $result;
     }
@@ -178,8 +183,7 @@ class QueryBuilder extends Builder
     {
         $result = parent::delete($id);
 
-        $this->handler->setBuilder($this)
-            ->invalidateQuery(Reflector::QUERY_TYPE_DELETE, [$this->getPrimaryKeyName() => $id]);
+        $this->invalidateAfterCommit(Reflector::QUERY_TYPE_DELETE, [$this->getPrimaryKeyName() => $id]);
 
         return $result;
     }
@@ -193,7 +197,6 @@ class QueryBuilder extends Builder
     {
         parent::truncate();
 
-        $this->handler->setBuilder($this)
-            ->invalidateQuery(Reflector::QUERY_TYPE_TRUNCATE);
+        $this->invalidateAfterCommit(Reflector::QUERY_TYPE_TRUNCATE);
     }
 }
