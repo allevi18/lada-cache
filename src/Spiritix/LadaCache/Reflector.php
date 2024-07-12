@@ -103,10 +103,8 @@ class Reflector
     {
         // Get main table
         $tables = [];
-        if (is_string($this->queryBuilder->from)) {
-            $tables[] = trim(preg_replace('#[\s]+(AS[\s]+)[\w\.]+#i', '', $this->queryBuilder->from));
-        }
-
+        $tables[] = trim(preg_replace('#[\s]+(AS[\s]+)[\w\.]+#i', '', $this->getQueryBuilderFromValue()));
+        
         // Add possible join tables
         $joins = $this->queryBuilder->joins ?: [];
         foreach ($joins as $join) {
@@ -114,6 +112,7 @@ class Reflector
                 $tables[] = trim(preg_replace('#[\s]+(AS[\s]+)[\w\.]+#i', '', $join->table));
             }
         }
+
 
         $this->getTablesFromWhere($this->queryBuilder, $tables);
 
@@ -171,7 +170,7 @@ class Reflector
 
             // If it doesn't contain the table name assume it's the "FROM" table
             if (strpos($where['column'], '.') === false) {
-                $where['column'] = implode('.', [trim(preg_replace('#[\s]+(AS[\s]+)[\w\.]+#i', '', $this->queryBuilder->from)), $where['column']]);
+                $where['column'] = implode('.', [trim(preg_replace('#[\s]+(AS[\s]+)[\w\.]+#i', '', $this->getQueryBuilderFromValue())), $where['column']]);
             }
 
             list($table, $column) = $this->splitTableAndColumn($where['column']);
@@ -325,5 +324,15 @@ class Reflector
                 return 'compileSelect';
                 break;
         }
+    }
+
+    private function getQueryBuilderFromValue(){
+        $queryBuilderFrom = $this->queryBuilder->from;
+
+        if (!is_string($queryBuilderFrom) && !is_array($this->queryBuilder->from)) {
+            $queryBuilderFrom = $this->queryBuilder->from->getValue($this->queryBuilder->getGrammar());
+        }
+        
+        return $queryBuilderFrom;
     }
 }
